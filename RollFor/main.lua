@@ -7,6 +7,9 @@ local version = m.get_addon_version()
 
 local M = {}
 
+function M.import_encoded_softres_data() end
+
+
 local getn = m.getn
 local info = m.pretty_print
 local hl = m.colors.highlight
@@ -401,7 +404,30 @@ function M.import_encoded_softres_data( data, data_loaded_callback )
     return
   end
 
+  -- Original import logic
   M.import_softres_data( softres_data )
+
+  -- SR+ tracking logic starts here
+  if not M.db.sr_history then M.db.sr_history = {} end
+
+  if softres_data and softres_data.softreserves then
+    for _, entry in ipairs(softres_data.softreserves) do
+      local player = entry.name
+      local items = entry.items
+
+      -- Ensure a table exists for this player
+      M.db.sr_history[player] = M.db.sr_history[player] or {}
+
+      for _, item in ipairs(items) do
+        local item_id = item.id
+        if item_id then
+          -- Increment SR count
+          M.db.sr_history[player][item_id] = (M.db.sr_history[player][item_id] or 0) + 1
+        end
+      end
+    end
+  end
+  -- End SR+ logic
 
   info( "Soft-res data loaded successfully!" )
   if data_loaded_callback then data_loaded_callback( softres_data ) end
@@ -511,6 +537,10 @@ local function setup_storage()
   if not M.db.version then
     M.db.version = version.str
   end
+  
+  
+  -- Initialize SR+ history tracking if not already present
+  M.db.sr_history = M.db.sr_history or {}
 end
 
 local function on_softres_command( args )
@@ -666,6 +696,25 @@ local function setup_slash_commands()
 
   --SLASH_DROPPED1 = "/DROPPED"
   --M.api().SlashCmdList[ "DROPPED" ] = simulate_loot_dropped
+  
+  -- Shows the current SR+ history table
+SLASH_SRPLUS1 = "/srplus"
+M.api().SlashCmdList["SRPLUS"] = function()
+  for player, items in pairs(M.db.sr_history or {}) do
+    m.pretty_print(string.format("== %s ==", player))
+    for item_id, count in pairs(items) do
+      m.pretty_print(string.format("  Item ID %s: %d weeks", item_id, count))
+    end
+  end
+end
+
+-- Clears SR+ history (optional)
+SLASH_RESETSRPLUS1 = "/resetsrplus"
+M.api().SlashCmdList["RESETSRPLUS"] = function()
+  M.db.sr_history = {}
+  m.pretty_print("SR+ history wiped.")
+end
+
 end
 
 function M.on_player_login()
