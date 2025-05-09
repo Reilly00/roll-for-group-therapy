@@ -392,46 +392,55 @@ function M.import_softres_data( softres_data )
   M.name_matcher.auto_match()
 end
 
-function M.import_encoded_softres_data( data, data_loaded_callback )
+function M.import_encoded_softres_data(data, data_loaded_callback)
   local sr = m.SoftRes
-  local softres_data = sr.decode( data )
+  local softres_data = sr.decode(data)
 
-  if not softres_data and data and string.len( data ) > 0 then
-    info( "Could not load soft-res data!", m.colors.red )
+  if not softres_data and data and string.len(data) > 0 then
+    info("Could not load soft-res data!", m.colors.red)
     return
   elseif not softres_data then
-    M.minimap_button.set_icon( M.minimap_button.ColorType.White )
+    M.minimap_button.set_icon(M.minimap_button.ColorType.White)
     return
   end
 
-  -- Original import logic
-  M.import_softres_data( softres_data )
+  -- ✅ Make sure storage exists
+  M.db.sr_history = M.db.sr_history or {}
+  M.db.imported_sheet_ids = M.db.imported_sheet_ids or {}
 
-  -- SR+ tracking logic starts here
-  if not M.db.sr_history then M.db.sr_history = {} end
+  -- ✅ Check if this sheet has already been imported
+  local metadata_id = softres_data.metadata and softres_data.metadata.id
+  if metadata_id and M.db.imported_sheet_ids[metadata_id] then
+    info("This RaidRes sheet has already been imported. Skipping duplicate.", m.colors.orange)
+    return
+  end
 
-  if softres_data and softres_data.softreserves then
+  -- ✅ Store the ID so it won't be processed again
+  if metadata_id then
+    M.db.imported_sheet_ids[metadata_id] = true
+  end
+
+  -- 🚀 Import the data
+  M.import_softres_data(softres_data)
+
+  -- ✅ SR+ tracking logic
+  if softres_data.softreserves then
     for _, entry in ipairs(softres_data.softreserves) do
       local player = entry.name
       local items = entry.items
 
-      -- Ensure a table exists for this player
       M.db.sr_history[player] = M.db.sr_history[player] or {}
-
       for _, item in ipairs(items) do
         local item_id = item.id
         if item_id then
-          -- Increment SR count
           M.db.sr_history[player][item_id] = (M.db.sr_history[player][item_id] or 0) + 1
         end
       end
     end
   end
-  -- End SR+ logic
 
-  info( "Soft-res data loaded successfully!" )
-  if data_loaded_callback then data_loaded_callback( softres_data ) end
-
+  info("Soft-res data loaded successfully!")
+  if data_loaded_callback then data_loaded_callback(softres_data) end
   update_minimap_icon()
 end
 
