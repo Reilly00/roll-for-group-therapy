@@ -717,11 +717,11 @@ M.api().SlashCmdList["SRPLUS"] = function()
   end
 end
 
--- Clears SR+ history (optional)
 SLASH_RESETSRPLUS1 = "/resetsrplus"
 M.api().SlashCmdList["RESETSRPLUS"] = function()
   M.db.sr_history = {}
-  m.pretty_print("SR+ history wiped.")
+  M.db.imported_sheet_ids = {}
+  m.pretty_print("SR+ history and imported sheet IDs wiped.")
 end
 
 end
