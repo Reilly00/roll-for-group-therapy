@@ -41,6 +41,7 @@ src\NameManualMatcher.lua
 src\NameMatchReport.lua
 src\EventHandler.lua
 src\SoftResGui.lua
+src\SrPlusGui.lua
 src\VersionBroadcast.lua
 src\MasterLoot.lua
 src\MasterLootCandidateSelectionFrame.lua

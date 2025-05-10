@@ -367,6 +367,7 @@ local function create_components()
   )
 
   M.sandbox = m.Sandbox.new()
+  M.srplus_gui = m.SrPlusGui.new(M.api, M.import_encoded_softres_data)
 end
 
 local function subscribe_for_component_events()
@@ -790,12 +791,10 @@ M.api().SlashCmdList["CLEANSRPLUS"] = function()
   m.pretty_print(string.format("🧼 Cleaned %d invalid SR+ entries.", cleaned))
 end
 
-SLASH_IMPORTSRPLUSUI1 = "/importsrplusui"
-M.api().SlashCmdList["IMPORTSRPLUSUI"] = function()
-  M.softres_gui.load("")  -- Clear the import field first
-  M.softres_gui.toggle()   -- Show the import UI popup
+SLASH_IMPORTSRPLUS1 = "/importsrplus"
+M.api().SlashCmdList["IMPORTSRPLUS"] = function()
+  M.srplus_gui.toggle()
 end
-
 
 end
 
