@@ -792,7 +792,8 @@ end
 
 SLASH_IMPORTSRPLUSUI1 = "/importsrplusui"
 M.api().SlashCmdList["IMPORTSRPLUSUI"] = function()
-  M.softres_gui.load_import_popup_with_data("")
+  M.softres_gui.load("")  -- Clear the import field first
+  M.softres_gui.toggle()   -- Show the import UI popup
 end
 
 
