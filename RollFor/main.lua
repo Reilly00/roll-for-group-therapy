@@ -1,5 +1,6 @@
 RollFor = RollFor or {}
 local m = RollFor
+m.base64 = { encode = m.encode_base64, decode = m.decode_base64 }
 
 ---@diagnostic disable-next-line: undefined-global
 local lib_stub = LibStub
@@ -723,6 +724,77 @@ M.api().SlashCmdList["RESETSRPLUS"] = function()
   M.db.imported_sheet_ids = {}
   m.pretty_print("SR+ history and imported sheet IDs wiped.")
 end
+
+SLASH_EXPORTSRPLUS1 = "/exportsrplus"
+M.api().SlashCmdList["EXPORTSRPLUS"] = function()
+  local sr_data = {
+    metadata = { id = "srplus-manual-export" },
+    softreserves = {}
+  }
+
+  local skipped = 0
+
+  -- Safe count function
+  local function count_array_entries(t)
+    local count = 0
+    for _, _ in ipairs(t) do count = count + 1 end
+    return count
+  end
+
+  for player, items in pairs(M.db.sr_history or {}) do
+    local sr_entry = { name = player, items = {} }
+
+    for item_id, count in pairs(items) do
+      table.insert(sr_entry.items, { id = item_id, count = count })
+    end
+
+    -- Try encoding the single entry to catch format issues
+    local ok, err = pcall(function() return lib_stub("Json-0.1.2").encode(sr_entry) end)
+    if ok then
+      table.insert(sr_data.softreserves, sr_entry)
+    else
+      skipped = skipped + 1
+      m.pretty_print(string.format("❌ Skipping player '%s' due to encode error: %s", tostring(player), tostring(err)), m.colors.red)
+    end
+  end
+
+  local num_exported = count_array_entries(sr_data.softreserves)
+
+  local json = lib_stub("Json-0.1.2")
+  local success, encoded_json = pcall(json.encode, sr_data)
+  if not success then
+    m.pretty_print("❌ Failed to encode SR+ data! Try cleaning invalid values first.", m.colors.red)
+    return
+  end
+
+  local base64 = m.base64.encode(encoded_json)
+  m.pretty_print(string.format("✅ Exported SR+ data (%d players, %d skipped):", num_exported, skipped))
+  m.pretty_print(base64)
+end
+
+SLASH_CLEANSRPLUS1 = "/cleansrplus"
+M.api().SlashCmdList["CLEANSRPLUS"] = function()
+  local cleaned = 0
+  for player, items in pairs(M.db.sr_history or {}) do
+    for item_id, count in pairs(items) do
+      local id_num = tonumber(item_id)
+      local count_num = tonumber(count)
+
+      if not id_num or not count_num then
+        M.db.sr_history[player][item_id] = nil
+        cleaned = cleaned + 1
+      end
+    end
+  end
+
+  m.pretty_print(string.format("🧼 Cleaned %d invalid SR+ entries.", cleaned))
+end
+
+SLASH_IMPORTSRPLUSUI1 = "/importsrplusui"
+M.api().SlashCmdList["IMPORTSRPLUSUI"] = function()
+  M.softres_gui.load_import_popup_with_data("")
+end
+
 
 end
 
