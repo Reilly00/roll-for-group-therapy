@@ -427,19 +427,38 @@ function M.import_encoded_softres_data(data, data_loaded_callback)
 
   -- ✅ SR+ tracking logic
   if softres_data.softreserves then
-    for _, entry in ipairs(softres_data.softreserves) do
-      local player = entry.name
-      local items = entry.items
+  for _, entry in ipairs(softres_data.softreserves) do
+    local player = entry.name
+    local items = entry.items or {}
 
-      M.db.sr_history[player] = M.db.sr_history[player] or {}
-      for _, item in ipairs(items) do
-        local item_id = item.id
-        if item_id then
-          M.db.sr_history[player][item_id] = (M.db.sr_history[player][item_id] or 0) + 1
-        end
+    -- Convert list to map for fast lookup
+    local current_items = {}
+    for _, item in ipairs(items) do
+      if item.id then
+        current_items[item.id] = true
+      end
+    end
+
+    -- Ensure player's history table exists
+    M.db.sr_history[player] = M.db.sr_history[player] or {}
+
+    -- Reset streaks for any previously tracked items that aren't reserved this week
+    for item_id, count in pairs(M.db.sr_history[player]) do
+      if not current_items[item_id] then
+        M.db.sr_history[player][item_id] = 0
+      end
+    end
+
+    -- Update/add streaks for this week's items
+    for item_id, _ in pairs(current_items) do
+      if M.db.sr_history[player][item_id] == nil or M.db.sr_history[player][item_id] == 0 then
+        M.db.sr_history[player][item_id] = 1
+      else
+        M.db.sr_history[player][item_id] = M.db.sr_history[player][item_id] + 1
       end
     end
   end
+end
 
   info("Soft-res data loaded successfully!")
   if data_loaded_callback then data_loaded_callback(softres_data) end
