@@ -729,8 +729,8 @@ local function setup_slash_commands()
   SLASH_RFT1 = "/rft"
   M.api().SlashCmdList[ "RFT" ] = M.sandbox.run
 
-  --SLASH_DROPPED1 = "/DROPPED"
-  --M.api().SlashCmdList[ "DROPPED" ] = simulate_loot_dropped
+  SLASH_DROPPED1 = "/DROPPED"
+  M.api().SlashCmdList[ "DROPPED" ] = simulate_loot_dropped
   
   -- Shows the current SR+ history table
 SLASH_SRPLUS1 = "/srplus"

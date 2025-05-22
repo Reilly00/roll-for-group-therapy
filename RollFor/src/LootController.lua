@@ -104,23 +104,18 @@ function M.new( player_info, loot_facade, loot_list, loot_frame, roll_controller
   end
 
   ---@param sr_players RollingPlayer[]
-  local function make_comment_tooltip( sr_players )
-    local result = { orange( "Soft-ressed by" ) }
+  local function make_comment_tooltip(sr_players, item_id)
+  local result = { orange("Soft-ressed by") }
 
-    if getn( sr_players ) == 1 then
-      local player = sr_players[ 1 ]
-      table.insert( result, m.colorize_player_by_class( player.name, player.class ) )
-
-      return result
-    end
-
-    for _, player in ipairs( sr_players ) do
-      local rolls = player.rolls and player.rolls > 1 and hl( string.format( " [%s rolls]", player.rolls ) ) or ""
-      table.insert( result, string.format( "%s%s", m.colorize_player_by_class( player.name, player.class ), rolls ) )
-    end
-
-    return result
+  for _, player in ipairs(sr_players) do
+    local bonus = m.get_srplus_bonus(player.name, item_id)
+    local bonus_str = bonus > 0 and hl(string.format(" [+%d]", bonus * 10)) or ""
+    local rolls = player.rolls and player.rolls > 1 and hl(string.format(" [%s rolls]", player.rolls)) or ""
+    table.insert(result, string.format("%s%s%s", m.colorize_player_by_class(player.name, player.class), bonus_str, rolls))
   end
+
+  return result
+end
 
   ---@alias LootListEntry {
   ---  item: DroppedItem|Coin,
@@ -160,12 +155,12 @@ function M.new( player_info, loot_facade, loot_list, loot_frame, roll_controller
         if item_count > 0 then
           if sr_player_count > 0 then
             if sr_player_count > item_count then
-              table.insert( result, { item = item, comment = orange( "SR" ), comment_tooltip = make_comment_tooltip( sr_players ), soft_ressed = true } )
+              table.insert( result, { item = item, comment = orange( "SR" ), comment_tooltip = make_comment_tooltip(sr_players, item.id), soft_ressed = true } )
             else
               local sr_player = pop_first_item_from_a_table( sr_player_map[ item.id ] )
 
               if sr_player then
-                table.insert( result, { item = item, comment = orange( "SR" ), comment_tooltip = make_comment_tooltip( { sr_player } ), soft_ressed = true } )
+                table.insert( result, { item = item, comment = orange( "SR" ), comment_tooltip = make_comment_tooltip( { sr_player }, item.id), soft_ressed = true } )
               else
                 table.insert( result, { item = item } )
               end
