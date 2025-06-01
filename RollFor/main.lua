@@ -736,13 +736,14 @@ local function setup_slash_commands()
 SLASH_SRPLUS1 = "/srplus"
 M.api().SlashCmdList["SRPLUS"] = function()
   for player, items in pairs(M.db.sr_history or {}) do
-  m.pretty_print(string.format("== %s ==", player))
-  for item_id, count in pairs(items) do
-    local bonus = math.max(0, (count - 1) * 10)
-    local week_str = count == 1 and "1 week" or string.format("%d weeks", count)
-    m.pretty_print(string.format("  Item ID %s: %s (+%d)", item_id, week_str, bonus))
+    m.pretty_print(string.format("== %s ==", player))
+    for item_id, count in pairs(items) do
+      local name = GetItemInfo(item_id) or ("Item ID " .. item_id)
+      local bonus = math.max(0, (count - 1) * 10)
+      local week_str = count == 1 and "1 week" or string.format("%d weeks", count)
+      m.pretty_print(string.format("  %s: %s (+%d)", name, week_str, bonus))
+    end
   end
-end
 end
 
 SLASH_RESETSRPLUS1 = "/resetsrplus"
