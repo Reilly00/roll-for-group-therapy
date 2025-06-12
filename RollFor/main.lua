@@ -405,6 +405,10 @@ function M.import_encoded_softres_data(data, data_loaded_callback)
     M.minimap_button.set_icon(M.minimap_button.ColorType.White)
     return
   end
+  
+    if softres_data.metadata and softres_data.metadata.total_sr_weeks then
+    M.db.total_sr_weeks = softres_data.metadata.total_sr_weeks
+  end
 
   -- ✅ Make sure storage exists
   M.db.sr_history = M.db.sr_history or {}
@@ -421,6 +425,9 @@ function M.import_encoded_softres_data(data, data_loaded_callback)
   if metadata_id then
     M.db.imported_sheet_ids[metadata_id] = true
   end
+  
+  -- ✅ Increment total SR import weeks
+  M.db.total_sr_weeks = (M.db.total_sr_weeks or 0) + 1
 
   -- 🚀 Import the data
   M.import_softres_data(softres_data)
@@ -735,30 +742,46 @@ local function setup_slash_commands()
   -- Shows the current SR+ history table
 SLASH_SRPLUS1 = "/srplus"
 M.api().SlashCmdList["SRPLUS"] = function()
+  local total_weeks = M.db.total_sr_weeks or 0
+  m.pretty_print(string.format("== SR+ History (across %d week%s) ==", total_weeks, total_weeks == 1 and "" or "s"))
+
   for player, items in pairs(M.db.sr_history or {}) do
     m.pretty_print(string.format("== %s ==", player))
+
     for item_id, count in pairs(items) do
       local name = GetItemInfo(item_id) or ("Item ID " .. item_id)
+
+      -- Calculate bonus properly
       local bonus = math.max(0, (count - 1) * 10)
       local week_str = count == 1 and "1 week" or string.format("%d weeks", count)
-      m.pretty_print(string.format("  %s: %s (+%d)", name, week_str, bonus))
+
+      -- If total SRs > total weeks, they must have used double SR on this item at least once
+      local doubled = (count > total_weeks) and "D" or ""
+
+      m.pretty_print(string.format("  %s: %s (+%d%s)", name, week_str, bonus, doubled))
     end
   end
+
+  m.pretty_print(string.format("== End of SR+ History (Total tracked weeks: %d) ==", total_weeks))
 end
 
 SLASH_RESETSRPLUS1 = "/resetsrplus"
 M.api().SlashCmdList["RESETSRPLUS"] = function()
   M.db.sr_history = {}
   M.db.imported_sheet_ids = {}
+  M.db.total_sr_weeks = 0
   m.pretty_print("SR+ history and imported sheet IDs wiped.")
 end
 
 SLASH_EXPORTSRPLUS1 = "/exportsrplus"
 M.api().SlashCmdList["EXPORTSRPLUS"] = function()
   local sr_data = {
-    metadata = { id = "srplus-manual-export" },
-    softreserves = {}
-  }
+  metadata = {
+    id = "srplus-manual-export",
+    total_sr_weeks = M.db.total_sr_weeks or 0
+  },
+  softreserves = {}
+}
 
   local skipped = 0
 
