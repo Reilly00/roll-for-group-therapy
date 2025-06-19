@@ -778,6 +778,36 @@ M.api().SlashCmdList["SRPLUS"] = function()
   m.pretty_print(string.format("== End of SR+ History (Total tracked weeks: %d) ==", total_weeks))
 end
 
+SLASH_DELETESR1 = "/srdelete"
+M.api().SlashCmdList["DELETESR"] = function(msg)
+  local player = string.gsub(msg or "", "^%s*(.-)%s*$", "%1") -- trim whitespace
+  if player == "" then
+    m.pretty_print("⚠️ Please specify a player name: /srdelete PlayerName", m.colors.orange)
+    return
+  end
+
+  local history = M.db.sr_history or {}
+
+  if not history[player] then
+    m.pretty_print("❌ No SR+ history found for player: " .. player, m.colors.red)
+    return
+  end
+
+  local deleted = {}
+  for item_id, count in pairs(history[player]) do
+    local name = GetItemInfo(item_id) or ("Item ID " .. item_id)
+    local bonus = math.max(0, (count - 1) * 10)
+    table.insert(deleted, string.format("  %s (%d weeks, +%d)", name, count, bonus))
+  end
+
+  history[player] = nil
+
+  m.pretty_print("✅ Deleted SR+ history for player: " .. player)
+  for _, line in ipairs(deleted) do
+    m.pretty_print(line)
+  end
+end
+
 SLASH_RESETSRPLUS1 = "/resetsrplus"
 M.api().SlashCmdList["RESETSRPLUS"] = function()
   M.db.sr_history = {}
