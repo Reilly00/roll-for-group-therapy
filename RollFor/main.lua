@@ -746,19 +746,32 @@ M.api().SlashCmdList["SRPLUS"] = function()
   m.pretty_print(string.format("== SR+ History (across %d week%s) ==", total_weeks, total_weeks == 1 and "" or "s"))
 
   for player, items in pairs(M.db.sr_history or {}) do
-    m.pretty_print(string.format("== %s ==", player))
+    local to_remove = {}
 
+    -- Mark all items with 0 count for removal
     for item_id, count in pairs(items) do
-      local name = GetItemInfo(item_id) or ("Item ID " .. item_id)
+      if count == 0 then
+        table.insert(to_remove, item_id)
+      end
+    end
 
-      -- Calculate bonus properly
-      local bonus = math.max(0, (count - 1) * 10)
-      local week_str = count == 1 and "1 week" or string.format("%d weeks", count)
+    -- Remove them from the table
+    for _, item_id in ipairs(to_remove) do
+      items[item_id] = nil
+    end
 
-      -- If total SRs > total weeks, they must have used double SR on this item at least once
-      local doubled = (count > total_weeks) and "D" or ""
+    -- If player still has valid SRs, print them
+    if next(items) then
+      m.pretty_print(string.format("== %s ==", player))
 
-      m.pretty_print(string.format("  %s: %s (+%d%s)", name, week_str, bonus, doubled))
+      for item_id, count in pairs(items) do
+        local name = GetItemInfo(item_id) or ("Item ID " .. item_id)
+        local bonus = math.max(0, (count - 1) * 10)
+        local week_str = count == 1 and "1 week" or string.format("%d weeks", count)
+        local doubled = (count > total_weeks) and "D" or ""
+
+        m.pretty_print(string.format("  %s: %s (+%d%s)", name, week_str, bonus, doubled))
+      end
     end
   end
 
