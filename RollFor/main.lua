@@ -406,68 +406,101 @@ function M.import_encoded_softres_data(data, data_loaded_callback)
     return
   end
   
-    if softres_data.metadata and softres_data.metadata.total_sr_weeks then
-    M.db.total_sr_weeks = softres_data.metadata.total_sr_weeks
-  end
-
-  -- ✅ Make sure storage exists
-  M.db.sr_history = M.db.sr_history or {}
-  M.db.imported_sheet_ids = M.db.imported_sheet_ids or {}
-
-  -- ✅ Check if this sheet has already been imported
-  local metadata_id = softres_data.metadata and softres_data.metadata.id
-  if metadata_id and M.db.imported_sheet_ids[metadata_id] then
-    info("This RaidRes sheet has already been imported. Skipping duplicate.", m.colors.orange)
-    return
-  end
-
-  -- ✅ Store the ID so it won't be processed again
-  if metadata_id then
-    M.db.imported_sheet_ids[metadata_id] = true
-  end
+  -- ✅ Check if this is an SR+ manual export (restore mode)
+  local is_srplus_restore = softres_data.metadata and softres_data.metadata.id == "srplus-manual-export"
   
-  -- ✅ Increment total SR import weeks
-  M.db.total_sr_weeks = (M.db.total_sr_weeks or 0) + 1
-
-  -- 🚀 Import the data
-  M.import_softres_data(softres_data)
-
-  -- ✅ SR+ tracking logic
-  if softres_data.softreserves then
-  for _, entry in ipairs(softres_data.softreserves) do
-    local player = entry.name
-    local items = entry.items or {}
-
-    -- Convert list to map for fast lookup
-    local current_items = {}
-    for _, item in ipairs(items) do
-      if item.id then
-        current_items[item.id] = true
+  if is_srplus_restore then
+    info("Restoring SR+ history from export...", m.colors.yellow)
+    
+    -- ✅ RESTORE MODE: Replace existing data entirely
+    M.db.total_sr_weeks = softres_data.metadata.total_sr_weeks or 0
+    M.db.sr_history = {}
+    M.db.imported_sheet_ids = M.db.imported_sheet_ids or {}
+    
+    -- ✅ Rebuild SR+ history from the exported counts
+    for _, entry in ipairs(softres_data.softreserves or {}) do
+      local player = entry.name
+      local items = entry.items or {}
+      
+      M.db.sr_history[player] = {}
+      
+      for _, item in ipairs(items) do
+        if item.id and item.count then
+          M.db.sr_history[player][item.id] = item.count
+        end
       end
     end
-
-    -- Ensure player's history table exists
-    M.db.sr_history[player] = M.db.sr_history[player] or {}
-
-    -- Reset streaks for any previously tracked items that aren't reserved this week
-    for item_id, count in pairs(M.db.sr_history[player]) do
-      if not current_items[item_id] then
-        M.db.sr_history[player][item_id] = 0
-      end
+    
+    info("SR+ history restored successfully!")
+    
+  else
+    -- ✅ NORMAL IMPORT MODE: Add new week
+    
+    -- Set total weeks from metadata if available
+    if softres_data.metadata and softres_data.metadata.total_sr_weeks then
+      M.db.total_sr_weeks = softres_data.metadata.total_sr_weeks
     end
 
-    -- Update/add streaks for this week's items
-    for item_id, _ in pairs(current_items) do
-      if M.db.sr_history[player][item_id] == nil or M.db.sr_history[player][item_id] == 0 then
-        M.db.sr_history[player][item_id] = 1
-      else
-        M.db.sr_history[player][item_id] = M.db.sr_history[player][item_id] + 1
+    -- ✅ Make sure storage exists
+    M.db.sr_history = M.db.sr_history or {}
+    M.db.imported_sheet_ids = M.db.imported_sheet_ids or {}
+
+    -- ✅ Check if this sheet has already been imported
+    local metadata_id = softres_data.metadata and softres_data.metadata.id
+    if metadata_id and M.db.imported_sheet_ids[metadata_id] then
+      info("This RaidRes sheet has already been imported. Skipping duplicate.", m.colors.orange)
+      return
+    end
+
+    -- ✅ Store the ID so it won't be processed again
+    if metadata_id then
+      M.db.imported_sheet_ids[metadata_id] = true
+    end
+    
+    -- ✅ Increment total SR import weeks
+    M.db.total_sr_weeks = (M.db.total_sr_weeks or 0) + 1
+
+    -- ✅ SR+ tracking logic for new imports
+    if softres_data.softreserves then
+      for _, entry in ipairs(softres_data.softreserves) do
+        local player = entry.name
+        local items = entry.items or {}
+
+        -- Convert list to map for fast lookup
+        local current_items = {}
+        for _, item in ipairs(items) do
+          if item.id then
+            current_items[item.id] = true
+          end
+        end
+
+        -- Ensure player's history table exists
+        M.db.sr_history[player] = M.db.sr_history[player] or {}
+
+        -- Reset streaks for any previously tracked items that aren't reserved this week
+        for item_id, count in pairs(M.db.sr_history[player]) do
+          if not current_items[item_id] then
+            M.db.sr_history[player][item_id] = 0
+          end
+        end
+
+        -- Update/add streaks for this week's items
+        for item_id, _ in pairs(current_items) do
+          if M.db.sr_history[player][item_id] == nil or M.db.sr_history[player][item_id] == 0 then
+            M.db.sr_history[player][item_id] = 1
+          else
+            M.db.sr_history[player][item_id] = M.db.sr_history[player][item_id] + 1
+          end
+        end
       end
     end
+    
+    info("Soft-res data loaded successfully!")
   end
-end
 
-  info("Soft-res data loaded successfully!")
+  -- 🚀 Import the softres data for the UI
+  M.import_softres_data(softres_data)
+  
   if data_loaded_callback then data_loaded_callback(softres_data) end
   update_minimap_icon()
 end
