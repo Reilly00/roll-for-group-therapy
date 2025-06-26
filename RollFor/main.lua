@@ -505,11 +505,6 @@ function M.import_encoded_softres_data(data, data_loaded_callback)
   update_minimap_icon()
 end
 
-function M.get_srplus_bonus(player_name, item_id)
-  if not player_name or not item_id then return 0 end
-  return (M.db.sr_history and M.db.sr_history[player_name] and M.db.sr_history[player_name][item_id]) or 0
-end
-
 local function on_roll_command( roll_slash_command )
   return function( args )
     if M.rolling_logic.is_rolling() then
